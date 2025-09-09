@@ -1,9 +1,9 @@
 import curses
-import re
+
 from papistui.helpers.styleparser import StyleParser
 
 
-class CommandInfo(object):
+class CommandInfo:
     def __init__(self, stdscr):
         """Constructor method
 
@@ -16,7 +16,7 @@ class CommandInfo(object):
         self.size = {"sizey": 0, "sizex": 0, "posy": 0, "posx": 0}
 
     def destroy(self):
-        """ Destroy the command info window and update size and active vars """
+        """Destroy the command info window and update size and active vars"""
         if self.pad:
             self.pad.erase()
             self.pad.refresh(

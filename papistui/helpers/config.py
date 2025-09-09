@@ -1,5 +1,7 @@
 import os
+
 import yaml
+
 import papis.config
 
 default_config = {
@@ -27,7 +29,7 @@ default_config = {
                 },
                 {"header": "Year", "content": '{doc.html_escape["year"]}', "width": 4},
                 {
-                    "header": "Titel",
+                    "header": "Title",
                     "content": '{doc.html_escape["title"]}',
                     "width": 400,
                 },
@@ -37,7 +39,9 @@ default_config = {
     "statusbar": {
         "left": {"default": '<black_white> {info["mode_upper"]} <black_white>'},
         "right": {
-            "default": '<black_white> {info["idx"]} < {info["marked"]} < {info["view"]} < {info["items"]}  <black_white>'
+            "default": (
+                '<black_white> {info["idx"]} < {info["marked"]} '
+                '< {info["view"]} < {info["items"]}  <black_white>')
         },
     },
     "keymappings": {
@@ -58,9 +62,10 @@ default_config = {
 
 
 def config_file_name(file_name=None, include_path=True):
-    """ Return the filename of the configuration file
+    """Return the filename of the configuration file
 
-    :param file_name: str force a specific filename, defaults to None and returns default
+    :param file_name: str force a specific filename, defaults to None and
+        returns default
     :param include_path: bool whether to include filepath, defaults to True
     :return str filename
     """
@@ -74,7 +79,7 @@ def config_file_name(file_name=None, include_path=True):
 
 
 def write_default_config(file_name=None):
-    """ Write a default minimal configuration file
+    """Write a default minimal configuration file
 
     :param file_name: str alternative filepath, defaults to None
     """
@@ -83,7 +88,7 @@ def write_default_config(file_name=None):
 
 
 def check_config(file_name=None):
-    """ Check whether configuration file is present
+    """Check whether configuration file is present
 
     :param file_name: str provide specific path where to look at, defaults to None
     :return bool whether file exists
@@ -93,7 +98,7 @@ def check_config(file_name=None):
 
 
 def complete_config(config):
-    """ Make sure that all strictly necessary configuration options are set
+    """Make sure that all strictly necessary configuration options are set
 
     :param config: dict of configuration options
     :return dict with all necessary entries and default values set
@@ -113,7 +118,7 @@ def complete_config(config):
     config["documentlist"].setdefault("marked-icon", "*")
     config["documentlist"].setdefault("defaultstyle", "multiline")
     config["documentlist"].setdefault("tagfield", "tags")
-    config["documentlist"].setdefault("sortkeys", "")
+    config["documentlist"].setdefault("defaultsort", "")
 
     if "defaultsort" in config["documentlist"]:
         config["documentlist"]["defaultsort"] = config["documentlist"][
@@ -140,18 +145,23 @@ def complete_config(config):
             "documentlist"
         ]["multilinestyle"]["rows"]
 
+    if "infowindow" not in config:
+        config["infowindow"] = {}
+
+    config["infowindow"].setdefault("default_on", False)
+
     return config
 
 
 def get_config(file_name=None):
-    """ Load configuration file and complete it where necessary
+    """Load configuration file and complete it where necessary
 
     :param file_name: alternative file path to be used, defaults to None
     :return dict with configuration options
     """
 
     if os.path.exists(config_file_name(file_name)):
-        with open(config_file_name(file_name), "r") as f:
+        with open(config_file_name(file_name)) as f:
             config = yaml.safe_load(f)
 
         return complete_config(config)

@@ -1,61 +1,52 @@
-import re
-import time
-import sys
+import curses
 import io
 import os
-import argparse
-import traceback
-import logging
-import locale
-import subprocess
+import re
 import shlex
-import curses
-import clipboard
 import tempfile
 from curses.textpad import Textbox
+
 import papis.api as api
-from papis.api import open_file
-from papis.api import open_dir
+from papis.api import open_dir, open_file
+from papis.commands.browse import run as browse_document
 from papis.commands.edit import run as edit_document
 from papis.commands.rm import run as rm_document
-from papis.commands.update import run as update_document
-from papis.commands.browse import run as browse_document
-from papistui.helpers.customargparse import ArgumentParser, HelpCall
-from papistui.helpers.document import Document
-from papistui.helpers.styleparser import StyleParser
-from papistui.helpers.keymappings import KeyMappings
-from papistui.helpers.config import get_config
-from papistui.components.documentlist import DocumentList
-from papistui.components.statusbar import StatusBar
-from papistui.components.messagebar import MessageBar
+
 from papistui.components.commandinfo import CommandInfo
+from papistui.components.documentlist import DocumentList
+from papistui.components.helpwindow import HelpWindow
 from papistui.components.infowindow import InfoWindow
 from papistui.components.keyinfo import KeyInfo
-from papistui.components.helpwindow import HelpWindow
-from papistui.features.vim import Vim
+from papistui.components.messagebar import MessageBar
+from papistui.components.statusbar import StatusBar
 from papistui.features.tagging import process_tags, tag_document
-
+from papistui.features.vim import Vim
+from papistui.helpers.config import get_config
+from papistui.helpers.customargparse import ArgumentParser, HelpCall
+from papistui.helpers.document import Document
+from papistui.helpers.keymappings import KeyMappings
+from papistui.helpers.styleparser import StyleParser
 
 try:
     # this was introduced recently
     from papis.logging import setup as setup_logging
+
     # This is used to redirect papis logger to a temporary file
     # in order to avoid it messing up curses when printing to stdout
     tmpfile = tempfile.NamedTemporaryFile()
-    setup_logging(50, logfile = tmpfile.name)
-
-except:
+    setup_logging(50, logfile=tmpfile.name)
+except ImportError:
     pass
 
 
-
-class Tui(object):
+class Tui:
     def __init__(self, options=None, config=None, debugging=False):
         """ Constructor method
 
         :param options: list of documents, defaults to None
         :param config: dict configuration options, defaults to None
-        :param debugging: bool whether to allow entering degbugger when hitting d, defaults to False
+        :param debugging: bool whether to allow entering degbugger when hitting
+            ``d``, defaults to *False*
         """
 
         self._quit = False
@@ -126,7 +117,7 @@ class Tui(object):
             self.commandwin_size["posx"],
         )
         # self.commandbox = curses.textpad.Textbox(self.commandwin)
-        self.commandbox = Textbox(self.commandwin, insert_mode = True)
+        self.commandbox = Textbox(self.commandwin, insert_mode=True)
         self.setup_parser()
 
         # HelpWindow
@@ -196,7 +187,9 @@ class Tui(object):
         curses.use_default_colors()
 
     def calcsize(self):
-        """ Compute sizes for each component based on screen size and active components """
+        """Compute sizes for each component based on screen size and active
+        components.
+        """
 
         rows, cols = self.stdscr.getmaxyx()
         self.rows = rows
@@ -343,7 +336,7 @@ class Tui(object):
         self.commandwin.erase()
         curses.curs_set(2)
         self.commandwin.addstr(0, 0, self.prefix[self.mode] + fill)
-        text = self.commandbox.edit(self._awaitenter)
+        self.commandbox.edit(self._awaitenter)
         self.commandwin.refresh()
 
     def _awaitenter(self, x):
@@ -356,11 +349,12 @@ class Tui(object):
             if self.mode == "command":
                 self.handle_command(self.commandbox.gather()[1:])
             elif self.mode == "search":
-                command = "search {}".format(self.commandbox.gather().strip()[1:])
+                text = self.commandbox.gather().strip()[1:]
+                command = f"search {text}"
                 self.handle_command(command)
             elif self.mode == "select":
                 option = self.commandbox.gather()[1:]
-                command = "{} -o {}".format(self.command, option)
+                command = f"{self.command} -o {option}"
                 self.command = None
                 self.handle_command(command)
 
@@ -385,16 +379,18 @@ class Tui(object):
             self.input_stream()
         except KeyboardInterrupt:
             pass
-        finally:
-            curses.endwin()
-            if self.picker and self.picked:
-                return self.doclist.selected_doc
+
+        curses.endwin()
+        if self.picker and self.picked:
+            return self.doclist.selected_doc
 
     def input_stream(self):
         """ Handle all input including keys and resize """
 
         self.statusbar.info = self.doclist.getinfo()
         self.doclist.display()
+        if self.config["infowindow"]["default_on"]:
+            self.info_toggle()
         while True:
             ch = self.doclist.pad.getch()
             if ch == curses.KEY_RESIZE:
@@ -423,7 +419,7 @@ class Tui(object):
         :param ch: keycode
         """
 
-        key = [ch] if len(self.keychain) == 0 else self.keychain + [ch]
+        key = [ch] if len(self.keychain) == 0 else [*self.keychain, ch]
         match = self.km.match(key)
         if match:
             self.clean()
@@ -544,7 +540,7 @@ class Tui(object):
                 elif len(files) > 1:
                     options = ["Choose file to open:"]
                     [
-                        options.append("{}: {}".format(idx, os.path.basename(i)))
+                        options.append(f"{idx}: {os.path.basename(i)}")
                         for idx, i in enumerate(files)
                     ]
                     return {"exit_status": 1, "options": options, "default": "0"}
@@ -603,12 +599,18 @@ class Tui(object):
                     rm_document(doc)
 
                 self.doclist.items = self.getalldocs()
-                return {"exit_status": 0, "message": ("{} document(s) deleted!".format(len_docs), "success")}
+                return {
+                    "exit_status": 0,
+                    "message": (f"{len_docs} document(s) deleted!", "success"),
+                }
             else:
-                return {"exit_status": 0, "message": ("Deletion cancelled", "error")}
+                return {
+                    "exit_status": 0,
+                    "message": ("Deletion cancelled", "error"),
+                }
         else:
             options = [
-                "Are you sure you want do delete {} document(s)?".format(len_docs),
+                f"Are you sure you want do delete {len_docs} document(s)?",
                 "0: No, cancel",
                 "1: Yes",
             ]
@@ -630,7 +632,7 @@ class Tui(object):
             return {
                 "exit_status": 0,
                 "message": (
-                    "Vim Server set to: {}".format(self.vim.servername),
+                    f"Vim Server set to: {self.vim.servername}",
                     "success",
                 ),
             }
@@ -640,14 +642,14 @@ class Tui(object):
                 return {
                     "exit_status": 0,
                     "message": (
-                        "Vim Server set to: {}".format(self.vim.servername),
+                        f"Vim Server set to: {self.vim.servername}",
                         "success",
                     ),
                 }
             if len(servers) > 1:
                 options = ["Choose server to connect to:"]
                 [
-                    options.append("{}: {}".format(idx, i))
+                    options.append(f"{idx}: {i}")
                     for idx, i in enumerate(servers)
                 ]
                 return {"exit_status": 1, "options": options}
@@ -672,7 +674,7 @@ class Tui(object):
         args = vars(args)
         if args["string"] is not None:
             string = self.styleparser.evaluate(
-                " ".join(args['string']), doc=self.doclist.selected_doc
+                " ".join(args["string"]), doc=self.doclist.selected_doc
             )
             self.vim.send(string)
 
@@ -708,11 +710,19 @@ class Tui(object):
             if value == "":
                 return {"exit_status": 2, "message": ("Nothing to copy", "error")}
             else:
-                clipboard.copy(value)
-                return {
-                    "exit_status": 0,
-                    "message": ("Copied string to clipboard", "success"),
-                }
+                try:
+                    import pyperclip
+
+                    pyperclip.copy(value)
+                    return {
+                        "exit_status": 0,
+                        "message": ("Copied string to clipboard", "success"),
+                    }
+                except ImportError:
+                    return {
+                        "exit_status": 2,
+                        "message": ("pyperclip is not available", "error"),
+                    }
         else:
             return {
                 "exit_status": 2,
@@ -724,52 +734,55 @@ class Tui(object):
 
         :param command: str command to be executed
         """
-        commands = shlex.split(command.strip())
-        try:
-            args = self.commandparser.parse_args(commands)
-            result = args.func(args)  # call the default function
-            if result is None:  # try to avoid by returning exit status
-                self.commandinfo.destroy()
-                if not self.helpwindow.active:
-                    self.doclist.display()
-                    self.statusbar.info = self.doclist.getinfo()
-                if self.infowindow.active:
-                    self.infowindow.display()
-            elif result["exit_status"] == 0:
-                if not self.helpwindow.active:
-                    if self.mode == "select":
-                        self.commandinfo.destroy()
-                        self.resize()
-                    self.mode = "normal"
-
-                    self.doclist.display()
-                    self.statusbar.info = self.doclist.getinfo()
+        if command.startswith("papis "):
+            self.papis_cmd(command)
+        else:
+            commands = shlex.split(command.strip())
+            try:
+                args = self.commandparser.parse_args(commands)
+                result = args.func(args)  # call the default function
+                if result is None:  # try to avoid by returning exit status
+                    self.commandinfo.destroy()
+                    if not self.helpwindow.active:
+                        self.doclist.display()
+                        self.statusbar.info = self.doclist.getinfo()
                     if self.infowindow.active:
                         self.infowindow.display()
-                    if "message" in result:
-                        self.message = result["message"]
-                    elif self.messagebar.active:
-                        self.messagebar.destroy()
-            elif result["exit_status"] == 1:
-                self.command = command
-                self.raise_commandinfo(info=result["options"])
-                default = result["default"] if "default" in result else ""
-                self.select_mode(default=default)
-            elif result["exit_status"] == 2:
+                elif result["exit_status"] == 0:
+                    if not self.helpwindow.active:
+                        if self.mode == "select":
+                            self.commandinfo.destroy()
+                            self.resize()
+                        self.mode = "normal"
+
+                        self.doclist.display()
+                        self.statusbar.info = self.doclist.getinfo()
+                        if self.infowindow.active:
+                            self.infowindow.display()
+                        if "message" in result:
+                            self.message = result["message"]
+                        elif self.messagebar.active:
+                            self.messagebar.destroy()
+                elif result["exit_status"] == 1:
+                    self.command = command
+                    self.raise_commandinfo(info=result["options"])
+                    default = result["default"] if "default" in result else ""
+                    self.select_mode(default=default)
+                elif result["exit_status"] == 2:
+                    self.commandinfo.destroy()
+                    self.resize()
+                    self.mode = "normal"
+                    self.message = result["message"]
+
+            except HelpCall as h:
+                self.raise_commandinfo(info=h.helpmessage())
+            except Exception as error:
                 self.commandinfo.destroy()
                 self.resize()
-                self.mode = "normal"
-                self.message = result["message"]
-
-        except HelpCall as h:
-            self.raise_commandinfo(info=h.helpmessage())
-        except Exception as error:
-            self.commandinfo.destroy()
-            self.resize()
-            self.doclist.display()
-            info = str(error).splitlines()[0]
-            info = re.sub("\(.*$", "", info)
-            self.message = (info, "error")
+                self.doclist.display()
+                info = str(error).splitlines()[0]
+                info = re.sub(r"\(.*$", "", info)
+                self.message = (info, "error")
 
     def raise_commandinfo(self, info):
         """
@@ -789,7 +802,7 @@ class Tui(object):
             self.resize()
             self.commandinfo.display(info)
 
-    def tag(self, args = None):
+    def tag(self, args=None):
         """ Tag marked or selected documents
 
         :returns dict with exit status
@@ -804,6 +817,31 @@ class Tui(object):
             tag_document(doc, tags, self.tagfield)
 
         return {"exit_status": 0}
+
+    def papis_cmd(self, command):
+        """ Run a papis command
+
+        :returns dict with exit status
+        """
+        import subprocess
+
+        string = self.styleparser.evaluate(
+            command,
+            doc=self.doclist.selected_doc,
+            docs=self.doclist.marked)
+        cmd = shlex.split(string)
+
+        curses.endwin()
+
+        try:
+            run = subprocess.Popen(cmd, shell=False)
+            run.wait()
+            self.stdscr.refresh()
+        except subprocess.SubprocessError:
+            self.stdscr.refresh()
+            self.resize()
+            self.doclist.display()
+            self.message = ("Execution of papis command failed", "error")
 
     def setup_parser(self):
         """ Registers all the available commands to an argparse subparser """
@@ -860,7 +898,9 @@ class Tui(object):
 
         mark_down = subparsers.add_parser(
             "mark_down",
-            description="Toggle mark on selected document in document list and scroll down",
+            description=(
+                "Toggle mark on selected document in document list and scroll down"
+            ),
         )
         mark_down.set_defaults(func=self.doclist.mark_down)
 
@@ -910,16 +950,31 @@ class Tui(object):
         )
         sort.set_defaults(func=self.sort)
 
-        tag = subparsers.add_parser("tag", description="Tag marked (if any) or selected document(s)")
+        tag = subparsers.add_parser(
+            "tag",
+            description="Tag marked (if any) or selected document(s)")
         tag.add_argument(
             "tags",
-            help="Tags to be added or removed (by adding trailing \'-\') documents (e.g. interesting- boring+)",
+            help=(
+                "Tags to be added or removed (by adding trailing '-') "
+                "documents (e.g. interesting- boring+)"),
             nargs="+",
             type=str,
         )
-        tag.add_argument("-s", "--selected", help="Force to tag only selected document even if some are marked.", action="store_true")
+        tag.add_argument(
+            "-s", "--selected",
+            help="Force to tag only selected document even if some are marked.",
+            action="store_true")
         tag.set_defaults(func=self.tag)
 
+        papis_cmd = subparsers.add_parser("papis", description="Run a papis command")
+        papis_cmd.add_argument(
+            "cmd",
+            help="Command arguments",
+            nargs="+",
+            type=str,
+        )
+        papis_cmd.set_defaults(func=self.papis_cmd)
 
         opn = subparsers.add_parser(
             "open", description="Open file attached to document"
@@ -970,7 +1025,10 @@ class Tui(object):
         browse.set_defaults(func=self.browse)
 
         rm = subparsers.add_parser("rm", description="Remove document")
-        rm.add_argument("-s", "--selected", help="Force to delete only selected document even if some are marked.", action="store_true")
+        rm.add_argument(
+            "-s", "--selected",
+            help="Force to delete only selected document even if some are marked.",
+            action="store_true")
         rm.add_argument(
             "-o", "--option", help="Confirm deletion (1) or cancel (0)", type=int
         )

@@ -1,7 +1,7 @@
 # papis-tui
-<sup>**!!! papis-tui is at an highly experimental stage. I have not tested this on any other machine than my own and only using my personal papis configuration and library. Please proceed with caution !!!**<sup>
+<sup>**!!! papis-tui is at an highly experimental stage. I have not tested this on any other machine than my own and only using my personal papis configuration and library. Please proceed with caution, papis-tui can delete documents in your database. Always have a backup in place !!!**<sup>
 
-papis-tui aims to be(come) a highly customizable general purpose **t**erminal **u**ser **i**nterface for the [papis](https://github.com/papis/papis) bibliography manager. 
+papis-tui aims to be(come) a highly customizable general purpose **t**erminal **u**ser **i**nterface for the [papis](https://github.com/papis/papis) bibliography manager.
 
 Be aware that `papis-tui` is not a full blown bibliography manager but only a "frontend" for your existing [papis](https://github.com/papis/papis) database!
 
@@ -15,6 +15,11 @@ Install the github version via pip:
 pip install git+https://github.com/supersambo/papis-tui.git@main
 ```
 
+**Note:** If you install papis and papistui using `pipx`, you have to inject papistui into the `venv` where papis lives in order for it to register papistui as picker:
+```
+pipx inject papis papistui
+```
+
 # Quickstart
 Once installed, you should be able to start papis-tui from the command line as:
 
@@ -26,13 +31,13 @@ papis-tui
 
 ```
 papis tui
-``` 
+```
 
 If there is no configuration file in place, papis-tui will offer to create a minimal default configuration file. All available commands as well as those commands mapped to certain keys can be looked up from within papis-tui in the help menu by typing `:help`. Descriptions and available options for individual commands can be found by adding the '--help' flag in the command mode. For instance `:open --help` will bring up the help message for the `open` command.
 
 # Features
 - highly customizable
-- choose between two display styles (table/multiline) 
+- choose between two display styles (table/multiline)
 - open, tag, remove, edit documents
 - search documents
 - sort documents
@@ -41,19 +46,19 @@ If there is no configuration file in place, papis-tui will offer to create a min
 - ...
 
 # Configuration
-`papis-tui` is configured via a YAML configuration file in your papis config folder (something like `~/.config/papis/papistui.yaml`). Configuration options are not yet documented extensively. However when starting papis-tui without a config file in place, it will offer to create a default config file, which is a good starting point to tinker around. Alternatively, you can also check out my personal config file [here](https://gist.github.com/supersambo/e90c034393fee09842c7d108b6ff00cc). 
+`papis-tui` is configured via a YAML configuration file in your papis config folder (something like `~/.config/papis/papistui.yaml`). Configuration options are not yet documented extensively. However when starting papis-tui without a config file in place, it will offer to create a default config file, which is a good starting point to tinker around. Alternatively, you can also check out config file used for the screencast above [here](https://gist.github.com/supersambo/e90c034393fee09842c7d108b6ff00cc).
 
 ## Configure display styles
-`papis-tui` offers two different styles for displaying information about the documents in your library. 'multiline' mimicks papis native tui and displays information about documents on several lines, whereas 'table' shows information in columns on one line per document. I personally prefer 'multiline', which is why 'table'-style is somewhat neglected. The default display style can be configured in the `documentlist` section of your config file like this:
+`papis-tui` offers two different styles for displaying information about the documents in your library. 'multiline' mimics papis native tui and displays information about documents on several lines, whereas 'table' shows information in columns on one line per document. I personally prefer 'multiline', which is why 'table'-style is somewhat neglected. The default display style can be configured in the `documentlist` section of your config file like this:
 
 ``` yaml
 documentlist:
   defaultstyle: multiline #or table
 ```
 
-When the tui is running you can switch between multiline- and table-style by typing `:toggle_style`. 
+When the tui is running you can switch between multiline- and table-style by typing `:toggle_style`.
 
-Similar to papis' native tui everything that is enclosed in curly brackets will get interpreted, so that you can display a documents title like this `{doc.html_escape['title']}`. The only difference is that `papis-tui` evaluates strings in curly brackets as python code, meaning that `{str(1 + 1)}` is a valid expression that will result in `2`. 
+Similar to papis' native tui everything that is enclosed in curly brackets will get interpreted, so that you can display a documents title like this `{doc.html_escape['title']}`. The only difference is that `papis-tui` evaluates strings in curly brackets as python code, meaning that `{str(1 + 1)}` is a valid expression that will result in `2`.
 
 ### Multiline
 The multiline display style can take a number of lines that display information about documents using a type of pseudo htmly markup language. Colors and style highly depend on your terminal settings and fonts used. Colors can be used as follows: `<bg>` (background), `<black`, `<red>` `<green>` `<yellow>` `<blue>` `<magenta>` `<cyan>` `<white>` and must always be closed in order to be rendered correctly `<white>text</white>`. Colors can be combined using an underscore in order to control fore- and background e.g. `<red_green>` (`<foreground_background>`). Font variations such as `bold`, `italic` and `underline` can also be used and combined in nested forms:
@@ -64,7 +69,7 @@ The multiline display style can take a number of lines that display information 
 
 ```
 
-Content and style is defined in the documentlist->multilinestyle section of your config file in `rows`, which takes a list of strings to be interpreted. 
+Content and style is defined in the documentlist->multilinestyle section of your config file in `rows`, which takes a list of strings to be interpreted.
 
 ```yaml
 documentlist:
@@ -80,7 +85,7 @@ documentlist:
 `papis-tui` injects a few additional methods into the papis Document class in order to display content conveniently. One example of this is used on the last line above. `docs.foreach` allows to display elements of a list enclosed in a specific style while specifying a separator `sep` (strings can be split into lists using the `split` argument).
 
 ### Tablestyle
-Table is less customizable in terms of styling. Pseudo html styling is not parsed in this case. Rather, one can choose styling attributes for the header (`headerstyle`), selected rows (`cursorrowstyle`), non selected rows (`rowstyle`) and the separator to be placed between columns. Still, style attributes can be combined using the pipe operator (e.g. `bold|red_green|underline`). 
+Table is less customizable in terms of styling. Pseudo html styling is not parsed in this case. Rather, one can choose styling attributes for the header (`headerstyle`), selected rows (`cursorrowstyle`), non selected rows (`rowstyle`) and the separator to be placed between columns. Still, style attributes can be combined using the pipe operator (e.g. `bold|red_green|underline`).
 
 Table style is defined columnwise, where each column entry takes three inputs `content` (what is displayed on each row per document), `header` (column title) and a fixed `width` for each column. Checkout the self-explanatory example below:
 
@@ -98,12 +103,13 @@ documentlist:
       header: Year
       width: 4
     - content: '{doc.html_escape["title"]}'
-      header: Titel
+      header: Title
       width: 400
     cursorrowstyle: black_white
     headerstyle: underline|bold
     rowstyle: white_bg
     separator: " \u2502 "
+    defaultsort: "time-added-"
 ```
 
 ![image](https://github.com/supersambo/repo_pics/blob/main/tablestyle.jpg?raw=true)
@@ -127,22 +133,22 @@ keymappings:
   q: quit
 ```
 ### Modifying Keyhints
-Chained keymappings may be hard to remember. Papis-tui therefore displays hints in the bottom right corner, whenever the key you entered matches the start of (a) keychain(s) mapped to specific commands. However, if a command includes various and/or complex arguments, this becomes dificult to decipher (also, papis-tui may struggle to render it correctly if your arguments include special characters). You may therefore provide a short description of what the command is supposed to do, which will be displayed instead.
+Chained keymappings may be hard to remember. Papis-tui therefore displays hints in the bottom right corner, whenever the key you entered matches the start of (a) keychain(s) mapped to specific commands. However, if a command includes various and/or complex arguments, this becomes difficult to decipher (also, papis-tui may struggle to render it correctly if your arguments include special characters). You may therefore provide a short description of what the command is supposed to do, which will be displayed instead.
 
-For instance, the `open` command accepts the `-d` flag to open a documents folder instead of the files attached. The `-r` argument can be used to filter available options based on the name of the files attached to a document (see `:open --help`). In order to access different options rapidly without having to remember this, you could configure the following keymappings. 
+For instance, the `open` command accepts the `-d` flag to open a documents folder instead of the files attached. The `-r` argument can be used to filter available options based on the name of the files attached to a document (see `:open --help`). In order to access different options rapidly without having to remember this, you could configure the following keymappings.
 
 ```yaml
 keymappings:
-  'od': 
+  'od':
     - open -d
     - "open directory"
-  'op': 
+  'op':
     - open -r 'pdf$'
     - "open pdf"
-  'oh': 
+  'oh':
     - open -r 'html$'
     - "open html"
-  'ot': 
+  'ot':
     - open -r 'txt$'
     - "open txt"
 ```
@@ -185,7 +191,7 @@ statusbar:
     command: "<black_red> {info["mode_upper"]} <black_red>"
     search: "<black_magenta> {info["mode_upper"]} <black_magenta>"
 ```
-In the above case papis-tui would fall back to the specified default mode, when in `select` mode, because no configuration for this mode is available. 
+In the above case papis-tui would fall back to the specified default mode, when in `select` mode, because no configuration for this mode is available.
 
 ## search keyword aliases
 Search keyword aliases allow typing queries faster. Instead of typing `author: habermas` you might define an alias `a` for `author:`, `t` for `title:` etc.
@@ -199,10 +205,11 @@ commandline:
 With this configuration in place the query `a habermas` gets automatically translated to `author: habermas` before being evaluated.
 
 ## info window
-The info window is located below the documentlist and can be toggled on and of. It is mainly intended for displaying the abstract of the selected document, but of course can be configured to be display something else. You can define as many different views as you want, each one requires a title and `content` field at least. Individual window heights can also be defined and whether content should be linewrapped.
+The info window is located below the documentlist and can be toggled on and of (set `default_on: True` to open it at startup). It is mainly intended for displaying the abstract of the selected document, but of course can be configured to be display something else. You can define as many different views as you want, each one requires a title and `content` field at least. Individual window heights can also be defined and as well as whether content should be linewrapped.
 
 ```yaml
 infowindow:
+  default_on: False
   views:
     abstract:
       content: "{doc['abstract']}"
@@ -212,7 +219,7 @@ infowindow:
       content: "{format_reference(doc)}"
 ```
 
-The `:info_toggle` command can be used to toggle the window on or off and views be changed whith `:info_cycle`. You can scroll up the info_window up or down using `:info_scroll_up` and `:info_scroll_down`.
+The `:info_toggle` command can be used to toggle the window on or off and views be changed with `:info_cycle`. You can scroll up the info_window up or down using `:info_scroll_up` and `:info_scroll_down`.
 
 ## Using papis-tui as the papis picker
 In order to use papis-tui as the picker for papis you must specify this in your papis configuration file (not `papistui.yaml`!) under settings, which is usually located in `~/.config/papis/config`:
@@ -240,7 +247,7 @@ keymappings:
 ```
 
 ## vim_send
-vim_send is similar to copy_to_clipboard and can be configured the same way. Of course, the difference is that vim_send sends parsed string to a vim instance. This feature is highly experimental but should work with both vim and neovim in theory. In order to use this feature with vim you must start vim with the `--servername yourservername` option for it to be detectable. If you prefer to use neovim you must set the following option in your configuration file:
+vim_send is similar to copy_to_clipboard and can be configured the same way. Of course, the difference is that vim_send sends parsed string to a vim instance. This feature is highly experimental but should work with both vim and neovim in theory. In order to use this feature with vim you must start vim with the `--servername yourservername` option for it to be detectable. Neovim does not require any startup flags, but you must set the following option in your configuration file to use it:
 
 ```yaml
 base:
@@ -260,13 +267,25 @@ keymappings:
   st: cmd -f 'title: '
 ```
 
+## papis (calling papis from within papis-tui)
+Most `papis` commands and command arguments are not implemented natively in `papis-tui`. Instead, the focus is to provide a useful and customizable user interface. However, `papis` can be called from within `papis-tui`, in the same manner one would do from the command line. This has the advantage that most features (including papis plugins) are available from within `papis-tui` and can be mapped to keys. In order to indicate which document a command should apply to, the following syntax can be used.
+
+``` yaml
+keymappings:
+  e: papis edit papis_id:{doc['papis_id']} -e gedit
+```
+
+Here, `doc` resolves to the currently selected document and the `papis_id:...` syntax can be leveraged to call papis on one specific document. `docs` is also available as variable holding a list of all currently marked documents. Unfortunately, there doesn't seem to exist a syntax similar to `papis_id:...` that allows identify a set of documents yet.
+
 # Roadmap
 Some ideas I'd like to implement some day (in no particular order of relevance):
+
 - [ ] Handle known bugs (see below)
-- [ ] Implement papis `addto` command
-- [ ] Implement papis `merge` command
-- [ ] Implement papis `mv` command
-- [ ] Implement papis `update` command
+- [X] Implement a general papis command
+- [ ] ~~Implement papis `addto` command~~
+- [ ] ~~Implement papis `merge` command~~
+- [ ] ~~Implement papis `mv` command~~
+- [ ] ~~Implement papis `update` command~~
 - [ ] add options `--file` and `--notes` to `rm` command.
 - [ ] allow unicode input on command line
 - [ ] save per session command history (access via `<key_up>`) on command line
@@ -278,7 +297,7 @@ Some ideas I'd like to implement some day (in no particular order of relevance):
 - papis-tui fails the first time after the papis cache was cleared (`papis --cc`). This makes papis-tui practically unusable if you have papis configured not to use the cache at all `use-cache = False`.
 - info window fails on some special characters (not sure which ones exactly), which causes papis-tui to crash completely
 
-# See also 
+# See also
 There are already quite a few document viewers/pickers, editor plugins for papis out there and there is even a built-in webapp:
 
 - checkout the `papis serve` command (webapp)

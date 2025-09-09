@@ -1,12 +1,12 @@
-import curses
 import argparse
 import re
+
 from papistui.helpers.styleparser import StyleParser
 
 
-class HelpWindow(object):
+class HelpWindow:
     def __init__(self, stdscr, keymappings, commandparser, docpad):
-        """ Constructor method
+        """Constructor method
 
         :param stdscr: curses stdscr for whole terminal
         :param keymappings: keymappings of class KeyMappings
@@ -38,7 +38,7 @@ class HelpWindow(object):
 
     @yoffset.setter
     def yoffset(self, yoffset):
-        """ Sets vertical scroll position and displays help
+        """Sets vertical scroll position and displays help
 
         :param yoffset: integer that defines from which line forward cont is displayed
         """
@@ -61,7 +61,7 @@ class HelpWindow(object):
             self.yoffset = self._yoffset - 1
 
     def build_help(self, rows, cols):
-        """ Create content for help lines
+        """Create content for help lines
 
         :param rows: number of rows
         :param cols: number of columns
@@ -72,16 +72,16 @@ class HelpWindow(object):
         lines.append(("", "left", True))
         lines.append(("<underline>Keymappings</underline>", "center", True))
         lines.append(("", "left", True))
-        for idx, (key, value) in enumerate(self.keymappings.items()):
-            lines.append(("{} :: {}".format(key.rjust(m), value), "left", False))
+        for key, value in self.keymappings.items():
+            lines.append((f"{key.rjust(m)} :: {value}", "left", False))
 
         lines.append(("", "left", True))
         lines.append(("<underline>Available commands</underline>", "center", True))
         lines.append(("", "left", True))
         for subparser in self.subparsers:
-            cmd = re.sub("^.*\s", "", subparser.prog)
+            cmd = re.sub(r"^.*\s", "", subparser.prog)
             lines.append(
-                ("{} :: {}".format(cmd.rjust(m), subparser.description), "left", False)
+                (f"{cmd.rjust(m)} :: {subparser.description}", "left", False)
             )
 
         lines.append(("", "left", True))
@@ -90,7 +90,7 @@ class HelpWindow(object):
         return lines
 
     def display(self):
-        """ Display Helpwindow """
+        """Display Helpwindow"""
 
         self.active = True
         rows, cols = self.stdscr.getmaxyx()

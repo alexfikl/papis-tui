@@ -1,11 +1,11 @@
 import curses
-import re
+
 from papistui.helpers.styleparser import StyleParser
 
 
-class KeyInfo(object):
+class KeyInfo:
     def __init__(self, stdscr):
-        """ Constructor method
+        """Constructor method
 
         :param stdscr: curses stdscr object (full screen)
         """
@@ -17,13 +17,13 @@ class KeyInfo(object):
         self.sizex = 0
 
     def format_rows(self, options):
-        """ Formats and aligns the available options
+        """Formats and aligns the available options
 
         :param options: list of available options
         """
 
         self.sizey = len(options) + 1
-        self.sizex = max([(len(i["km"]) + len(i["cmd_desc"])) for i in options]) + 7
+        self.sizex = max((len(i["km"]) + len(i["cmd_desc"])) for i in options) + 7
         rows = []
         for option in options:
             length = len(option["km"]) + len(option["cmd_desc"]) + 4
@@ -35,7 +35,7 @@ class KeyInfo(object):
         return rows
 
     def display(self, doclist, options):
-        """ Display keyhints on top of documentlist pad in bottom right corner
+        """Display keyhints on top of documentlist pad in bottom right corner
 
         :param doclist: The Documentlist objects which includes screen
         :param options: list of options to be displayed

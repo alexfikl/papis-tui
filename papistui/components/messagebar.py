@@ -1,11 +1,11 @@
 import curses
-import re
+
 from papistui.helpers.styleparser import StyleParser
 
 
-class MessageBar(object):
+class MessageBar:
     def __init__(self, stdscr):
-        """ Constructor method
+        """Constructor method
 
         :param stdscr: curses stdscr (full screen)
         """
@@ -17,7 +17,7 @@ class MessageBar(object):
         self.active = False
 
     def destroy(self):
-        """ Clean pad and set to inactive. Space remains reserved """
+        """Clean pad and set to inactive. Space remains reserved"""
 
         if self.pad:
             self.pad.erase()
@@ -34,13 +34,13 @@ class MessageBar(object):
         self.active = False
 
     def display(self, message):
-        """ Display error, success or neutral message
+        """Display error, success or neutral message
 
         :param message: either str or tuple in the form of (message, message_type)
                         where message_type is either 'success', 'neutral', 'error'
         """
 
-        if type(message) == tuple:
+        if type(message) is tuple:
             message_type = message[1]
             message = message[0]
         else:
